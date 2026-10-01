@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "whereq.cloud"
+version = "0.1.0"
+description = "Official Python SDK for the WhereQ data cloud (api.whereq.cloud)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "WhereQ", email = "whereq@gmail.com" }]
+keywords = ["whereq", "data", "api", "cost-of-living", "prices", "trending", "finance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["httpx>=0.27"]
+
+[project.urls]
+Homepage = "https://whereq.cloud"
+Documentation = "https://api.whereq.cloud/docs"
+Repository = "https://github.com/whereq/whereq-cloud-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/whereq_cloud"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/whereq_cloud", "README.md", "LICENSE"]

@@ -1,0 +1,27 @@
+name: Release
+
+# Publish to PyPI on a version tag (e.g. v0.1.0) via Trusted Publishing (OIDC) —
+# no stored token. One-time setup on PyPI: create a "pending publisher" (or add one
+# to the project) with owner=whereq, repo=whereq-cloud-python, workflow=release.yml,
+# environment=pypi. See https://docs.pypi.org/trusted-publishers/
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write        # OIDC token for PyPI Trusted Publishing
+
+jobs:
+  publish:
+    name: build · publish to PyPI
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pytest && python -m pytest -q   # green bar before publish
+      - run: pip install build && python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
