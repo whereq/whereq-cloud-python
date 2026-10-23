@@ -1,8 +1,9 @@
 # whereq.cloud — Python SDK
 
 Official Python client for the [WhereQ data cloud](https://whereq.cloud) — the versioned,
-metered `/v1` API at **`api.whereq.cloud`**: cost-of-living prices, a cross-region
-cost-of-living comparison, trending hot-lists, autos, equities & market data, and more.
+metered `/v1` API at **`api.whereq.cloud`**: North-America fuel & gas-station prices,
+cost-of-living prices, a cross-region comparison, trending hot-lists, autos, lottery,
+equities & market data, and more.
 
 Public endpoints work with no key; metered endpoints take an API key.
 
@@ -28,7 +29,12 @@ print(wq.prices(domain="rent", region="us", bedrooms=2, limit=10))
 print(wq.price(3958))                  # one series + full history
 
 # Bulk CSV export
-csv_text = wq.prices_csv(domain="fuel", region="us")
+csv_text = wq.prices_csv(domain="food", region="us")
+
+# Fuel — North-America gas & diesel: geolocated stations + aggregated series
+wq.fuel_stations(country="MX", municipality="Tijuana", product="regular")
+wq.fuel_station(1)                     # one station + intra-day price history
+wq.fuel_prices(region="mx")            # state / national price series
 
 # Discovery
 wq.catalog(); wq.categories(); wq.regions(); wq.domains()

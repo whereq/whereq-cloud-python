@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "whereq.cloud"
 version = "0.1.0"
-description = "Official Python SDK for the WhereQ data cloud (api.whereq.cloud)"
+description = "Official Python SDK for the WhereQ data cloud (api.whereq.cloud) — North-America fuel & gas-station prices, cost-of-living prices, autos, lottery, trending, finance & more."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [{ name = "WhereQ", email = "whereq@gmail.com" }]
-keywords = ["whereq", "data", "api", "cost-of-living", "prices", "trending", "finance"]
+keywords = ["whereq", "data", "api", "fuel-prices", "gas-prices", "cost-of-living", "prices", "autos", "trending", "finance"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

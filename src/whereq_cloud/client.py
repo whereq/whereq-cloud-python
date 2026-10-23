@@ -150,3 +150,17 @@ class Client:
 
     def autos_models(self, **params: Any) -> Any:
         return self.get("/v1/autos/models", **params)
+
+    # -- fuel (gas & diesel) -------------------------------------------------
+    def fuel_stations(self, **params: Any) -> Any:
+        """Geolocated retail fuel stations (lat/lon, municipality) with latest
+        prices. Filters: country, state, municipality, product, bbox, q."""
+        return self.get("/v1/fuel/stations", **params)
+
+    def fuel_station(self, station_id: Any) -> Any:
+        """One station: location + latest prices + intra-day price history."""
+        return self.get(f"/v1/fuel/stations/{station_id}")
+
+    def fuel_prices(self, **params: Any) -> Any:
+        """Aggregated fuel price series (state / national), North-America-wide."""
+        return self.get("/v1/prices", domain="fuel", **params)
