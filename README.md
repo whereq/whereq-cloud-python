@@ -37,6 +37,12 @@ wq.fuel_stations(country="MX", municipality="Tijuana", product="regular")
 wq.fuel_station(1)                     # one station + intra-day price history
 wq.fuel_prices(region="mx")            # state / national price series
 
+# Lottery — draws, per-number frequency, and the game registry
+wq.lottery_games(country="US", region="NY")
+wq.lottery_draws(game="ny_lotto", days=30)
+wq.lottery_latest_draw("ny_lotto")
+wq.lottery_frequency("ny_lotto", days=365)
+
 # Discovery
 wq.catalog(); wq.categories(); wq.regions(); wq.domains()
 

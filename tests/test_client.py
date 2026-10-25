@@ -155,3 +155,38 @@ def test_iter_fuel_stations_stops_on_the_demo_preview():
     out = list(_client(handler).iter_fuel_stations(country="CA"))
     assert [s["id"] for s in out] == [1, 2]
     assert len(calls) == 1
+
+
+def test_lottery_paths():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.url.path, str(request.url)))
+        return httpx.Response(200, json={"count": 0})
+
+    c = _client(handler)
+    c.lottery_draws(game="powerball", days=7, limit=5)
+    c.lottery_latest_draw("powerball")
+    c.lottery_frequency("powerball", days=90)
+    c.lottery_games(country="US", region="NY")
+    c.lottery_game("powerball")
+
+    assert seen[0][0] == "/v1/lottery/draws"
+    assert "game=powerball" in seen[0][1] and "days=7" in seen[0][1]
+    assert seen[1][0] == "/v1/lottery/draws/powerball/latest"
+    assert seen[2][0] == "/v1/lottery/draws/powerball/frequency"
+    assert "days=90" in seen[2][1]
+    assert seen[3][0] == "/v1/lottery/games"
+    assert "country=US" in seen[3][1] and "region=NY" in seen[3][1]
+    assert seen[4][0] == "/v1/lottery/games/powerball"
+
+
+def test_version_matches_pyproject():
+    """The published version and the module's __version__ must not drift."""
+    import pathlib
+    import re
+
+    pyproject = pathlib.Path(__file__).resolve().parents[1] / "pyproject.toml"
+    match = re.search(r'^version = "([^"]+)"', pyproject.read_text(), re.M)
+    assert match, "no version found in pyproject.toml"
+    assert __version__ == match.group(1)

@@ -30,7 +30,7 @@ from whereq_cloud.types import (
     PriceSeriesResponse,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 DEFAULT_BASE_URL = "https://api.whereq.cloud"
 
 #: Re-exported so callers can validate a filter before spending a request.
@@ -178,6 +178,42 @@ class Client:
 
     def autos_models(self, **params: Any) -> Any:
         return self.get("/v1/autos/models", **params)
+
+    # -- lottery --------------------------------------------------------------
+    def lottery_draws(self, game: Optional[str] = None, days: int = 30,
+                      limit: int = 50) -> Any:
+        """Recent lottery draws, newest first.
+
+        Args:
+            game: a game slug, e.g. ``"powerball"``.
+            days: how far back to look (1–730). Ignored on the preview.
+            limit: 1–200 draws per page.
+
+        Unentitled callers get the oldest 100 draws instead of the recent
+        ones — check ``response["demo"]``.
+        """
+        return self.get("/v1/lottery/draws", game=game, days=days, limit=limit)
+
+    def lottery_latest_draw(self, game: str) -> Any:
+        """The most recent draw for a game.
+
+        On the unentitled preview this is the *oldest* draw — the recent one
+        is the gated, valuable row.
+        """
+        return self.get(f"/v1/lottery/draws/{game}/latest")
+
+    def lottery_frequency(self, game: str, days: int = 365) -> Any:
+        """Per-number frequency for a game over a window (30–1825 days)."""
+        return self.get(f"/v1/lottery/draws/{game}/frequency", days=days)
+
+    def lottery_games(self, country: Optional[str] = None,
+                      region: Optional[str] = None) -> Any:
+        """The lottery game registry: names, play rules and draw days."""
+        return self.get("/v1/lottery/games", country=country, region=region)
+
+    def lottery_game(self, slug: str) -> Any:
+        """One game's full play rules and metadata."""
+        return self.get(f"/v1/lottery/games/{slug}")
 
     # -- fuel (gas & diesel) -------------------------------------------------
     def fuel_stations(self, country: Optional[str] = None, state: Optional[str] = None,
