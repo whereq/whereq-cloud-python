@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "whereq.cloud"
-version = "0.2.0"
+version = "0.3.0"
 description = "Official Python SDK for the WhereQ data cloud (api.whereq.cloud) — North-America fuel & gas-station prices, cost-of-living prices, autos, lottery, trending, finance & more."
 readme = "README.md"
 license = "MIT"

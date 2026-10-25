@@ -10,16 +10,39 @@ Public endpoints work with no key; metered endpoints take a ``X-API-Key``.
 
     wq.cost_of_living("us:California,ca:Ontario")
     wq.prices(domain="rent", region="us", bedrooms=2)
+    wq.fuel_stations(country="CA", state="ON")   # station-level prices
     wq.get("/v1/trending", limit=10)            # escape hatch for any endpoint
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 import httpx
 
-__version__ = "0.2.0"
+from whereq_cloud.types import (
+    FUEL_COUNTRIES,
+    FUEL_CURRENCIES,
+    FUEL_PRODUCTS,
+    CostOfLivingResponse,
+    FuelStation,
+    FuelStationDetail,
+    FuelStationsResponse,
+    PriceSeriesResponse,
+)
+
+__version__ = "0.3.0"
 DEFAULT_BASE_URL = "https://api.whereq.cloud"
+
+#: Re-exported so callers can validate a filter before spending a request.
+__all__ = [
+    "Client",
+    "WhereqError",
+    "DEFAULT_BASE_URL",
+    "FUEL_PRODUCTS",
+    "FUEL_COUNTRIES",
+    "FUEL_CURRENCIES",
+    "__version__",
+]
 
 
 class WhereqError(Exception):
@@ -82,23 +105,28 @@ class Client:
 
     # -- prices / cost of living --------------------------------------------
     def prices(self, domain: Optional[str] = None, region: Optional[str] = None,
-               bedrooms: Optional[int] = None, q: Optional[str] = None,
-               limit: int = 60, offset: int = 0) -> Any:
-        """Cost-of-living price series (fuel | food | energy | housing | rent)."""
-        return self.get("/v1/prices", domain=domain, region=region, bedrooms=bedrooms,
-                        q=q, limit=limit, offset=offset)
+               geo: Optional[str] = None, bedrooms: Optional[int] = None,
+               q: Optional[str] = None, limit: int = 60, offset: int = 0) -> PriceSeriesResponse:
+        """Cost-of-living price series (fuel | food | energy | housing | rent).
+
+        ``region`` takes a region slug or a comma-separated list of them
+        (``"us,ca"``); ``geo`` is a free-text place name ("Calgary, Alberta").
+        """
+        return self.get("/v1/prices", domain=domain, region=region, geo=geo,
+                        bedrooms=bedrooms, q=q, limit=limit, offset=offset)
 
     def price(self, series_id: int) -> Any:
         """One price series with its full history."""
         return self.get(f"/v1/prices/{series_id}")
 
     def prices_csv(self, domain: Optional[str] = None, region: Optional[str] = None,
-                   bedrooms: Optional[int] = None, q: Optional[str] = None) -> str:
+                   geo: Optional[str] = None, bedrooms: Optional[int] = None,
+                   q: Optional[str] = None) -> str:
         """Bulk CSV export of matching price series."""
         return self.get_text("/v1/prices/export", domain=domain, region=region,
-                             bedrooms=bedrooms, q=q)
+                             geo=geo, bedrooms=bedrooms, q=q)
 
-    def cost_of_living(self, places: str) -> Any:
+    def cost_of_living(self, places: str) -> CostOfLivingResponse:
         """Compare cost of living across US states / CA provinces / metros.
 
         ``places``: comma-separated ``region:name`` or ``m:<rent-series-id>``,
@@ -152,15 +180,77 @@ class Client:
         return self.get("/v1/autos/models", **params)
 
     # -- fuel (gas & diesel) -------------------------------------------------
-    def fuel_stations(self, **params: Any) -> Any:
-        """Geolocated retail fuel stations (lat/lon, municipality) with latest
-        prices. Filters: country, state, municipality, product, bbox, q."""
-        return self.get("/v1/fuel/stations", **params)
+    def fuel_stations(self, country: Optional[str] = None, state: Optional[str] = None,
+                      municipality: Optional[str] = None, product: Optional[str] = None,
+                      bbox: Optional[str] = None, q: Optional[str] = None,
+                      limit: int = 100, offset: int = 0,
+                      **extra: Any) -> FuelStationsResponse:
+        """Geolocated retail fuel stations with their latest prices.
 
-    def fuel_station(self, station_id: Any) -> Any:
-        """One station: location + latest prices + intra-day price history."""
-        return self.get(f"/v1/fuel/stations/{station_id}")
+        Coverage: Mexico (``MX``, CRE open data), the United States (``US``)
+        and Canada (``CA``). Prices are in **local currency per litre** —
+        ``MXN/L``, ``USD/L`` and ``CAD/L`` respectively.
 
-    def fuel_prices(self, **params: Any) -> Any:
-        """Aggregated fuel price series (state / national), North-America-wide."""
-        return self.get("/v1/prices", domain="fuel", **params)
+        Args:
+            country: ``"MX"``, ``"US"`` or ``"CA"``.
+            state: state/province name *or* ISO code — ``"Ontario"`` and
+                ``"ON"`` both work for Canada, ``"Texas"``/``"TX"`` for the US.
+            municipality: city name, e.g. ``"Mississauga"``.
+            product: one of ``regular``, ``midgrade``, ``premium``, ``diesel``.
+            bbox: ``"minLon,minLat,maxLon,maxLat"`` for a map viewport.
+            q: station-name search.
+            limit: 1–500 rows per page (default 100).
+            offset: row offset for paging.
+            **extra: any other query parameter the API accepts.
+
+        Unentitled callers get a 100-row preview of the oldest rows and the
+        pagination arguments are ignored — check ``response["demo"]``.
+        """
+        return self.get("/v1/fuel/stations", country=country, state=state,
+                        municipality=municipality, product=product, bbox=bbox,
+                        q=q, limit=limit, offset=offset, **extra)
+
+    def fuel_station(self, station_id: Any, product: Optional[str] = None,
+                     days: int = 90) -> FuelStationDetail:
+        """One station: location, latest prices and its price-change timeline.
+
+        Args:
+            station_id: the station's numeric id.
+            product: restrict the timeline to one product.
+            days: how far back the timeline reaches (1–1825, default 90).
+        """
+        return self.get(f"/v1/fuel/stations/{station_id}", product=product, days=days)
+
+    def iter_fuel_stations(self, page_size: int = 500, **filters: Any) -> Iterator[FuelStation]:
+        """Yield every matching station, paging through the API for you.
+
+        Only meaningful with an entitled key. The unentitled preview always
+        returns the *same* oldest 100 rows and ignores the paging arguments,
+        so there is nothing more to fetch: this yields that first page and
+        stops rather than looping on it.
+        """
+        offset = 0
+        while True:
+            page = self.fuel_stations(limit=page_size, offset=offset, **filters)
+            stations = page.get("stations") or []
+            if not stations:
+                return
+            yield from stations
+            if page.get("demo"):
+                return                      # preview: every page is the same slice
+            offset += len(stations)
+            total = page.get("total")
+            if total is not None and offset >= total:
+                return
+
+    def fuel_prices(self, region: Optional[str] = None, geo: Optional[str] = None,
+                    q: Optional[str] = None, limit: int = 60,
+                    offset: int = 0) -> PriceSeriesResponse:
+        """Aggregated fuel price series (state / national / metro).
+
+        These are the *series* behind the charts — EIA weekly for the US,
+        StatCan monthly for Canada, CRE for Mexico — not the station-level
+        prices that ``fuel_stations()`` returns.
+        """
+        return self.get("/v1/prices", domain="fuel", region=region, geo=geo,
+                        q=q, limit=limit, offset=offset)
