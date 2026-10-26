@@ -28,8 +28,8 @@ class FuelStationPrice(TypedDict):
     observed_at: str
 
 
-class FuelStation(TypedDict):
-    """A geolocated retail fuel station and its latest prices.
+class FuelStationBase(TypedDict):
+    """The station fields, without the prices.
 
     ``state`` is the human label ("Ontario", "Texas"); ``state_iso`` is the
     two-letter code ("ON", "TX") and matches Mexico's rows, which have the
@@ -47,7 +47,20 @@ class FuelStation(TypedDict):
     municipality: Optional[str]
     lat: Optional[float]
     lon: Optional[float]
+
+
+class FuelStation(FuelStationBase):
+    """A station as the *list* endpoint returns it — with its latest prices."""
+
     prices: dict[str, FuelStationPrice]
+
+
+class FuelStationSummary(FuelStationBase, total=False):
+    """A station as the *detail* endpoint returns it.
+
+    No ``prices`` map: the timeline comes back as the separate ``prices``
+    array on the response, one entry per price change.
+    """
 
 
 class _FuelStationsBase(TypedDict):
@@ -81,7 +94,7 @@ class FuelStationPricePoint(TypedDict):
 
 
 class _FuelStationDetailBase(TypedDict):
-    station: FuelStation
+    station: FuelStationSummary
     prices: list[FuelStationPricePoint]
 
 

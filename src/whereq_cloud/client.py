@@ -31,7 +31,7 @@ from whereq_cloud.types import (
     PriceSeriesResponse,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 DEFAULT_BASE_URL = "https://api.whereq.cloud"
 
 #: Re-exported so callers can validate a filter before spending a request.
