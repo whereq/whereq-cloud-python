@@ -15,6 +15,7 @@ Public endpoints work with no key; metered endpoints take a ``X-API-Key``.
 """
 from __future__ import annotations
 
+import os
 from typing import Any, Iterator, Optional
 
 import httpx
@@ -30,7 +31,7 @@ from whereq_cloud.types import (
     PriceSeriesResponse,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 DEFAULT_BASE_URL = "https://api.whereq.cloud"
 
 #: Re-exported so callers can validate a filter before spending a request.
@@ -66,10 +67,12 @@ class Client:
 
     def __init__(self, api_key: Optional[str] = None, base_url: str = DEFAULT_BASE_URL,
                  timeout: float = 30.0) -> None:
+        # The key may come from the argument or the environment, in that order.
+        key = api_key if api_key is not None else os.getenv("WHEREQ_API_KEY", "")
         headers = {"Accept": "application/json",
                    "User-Agent": f"whereq.cloud-python/{__version__}"}
-        if api_key:
-            headers["X-API-Key"] = api_key
+        if key:
+            headers["X-API-Key"] = key
         self._http = httpx.Client(base_url=base_url.rstrip("/"), headers=headers, timeout=timeout)
 
     # -- lifecycle -----------------------------------------------------------

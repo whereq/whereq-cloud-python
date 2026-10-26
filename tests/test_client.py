@@ -190,3 +190,14 @@ def test_version_matches_pyproject():
     match = re.search(r'^version = "([^"]+)"', pyproject.read_text(), re.M)
     assert match, "no version found in pyproject.toml"
     assert __version__ == match.group(1)
+
+
+def test_api_key_falls_back_to_the_environment(monkeypatch):
+    monkeypatch.setenv("WHEREQ_API_KEY", "wq_env_key")
+    c = Client()
+    assert c._http.headers["x-api-key"] == "wq_env_key"
+    # An explicit key still wins over the environment.
+    c2 = Client(api_key="wq_explicit")
+    assert c2._http.headers["x-api-key"] == "wq_explicit"
+    c.close()
+    c2.close()

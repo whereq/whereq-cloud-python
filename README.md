@@ -20,6 +20,7 @@ from whereq_cloud import Client
 
 wq = Client()                          # public access
 # wq = Client(api_key="wq_live_…")     # metered tier
+# wq = Client()                        # uses $WHEREQ_API_KEY
 
 # Cost of living — compare US states, CA provinces, or metros (by rent-series id)
 print(wq.cost_of_living("us:California,ca:Ontario,m:3958"))
