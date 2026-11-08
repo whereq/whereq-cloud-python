@@ -44,6 +44,14 @@ wq.lottery_draws(game="ny_lotto", days=30)
 wq.lottery_latest_draw("ny_lotto")
 wq.lottery_frequency("ny_lotto", days=365)
 
+# Geography — places, drawable boundaries, and the containment hierarchy
+wq.geo_places(kind="ward", country="CA")    # "CA" or "CAN" — either finds Canada
+wq.geo_place("osm:r1428125")                # one place + its parents + its children
+wq.geo_boundary("osm:r1428125", simplify=50)  # GeoJSON, simplification in METRES
+wq.geo_at(lon=-79.38, lat=43.65)            # every place containing a point
+wq.geo_concepts()                           # the vocabulary, with live counts
+wq.geo_overlaps(bbox="-79.6,43.5,-79.2,43.8")  # pairs covering the same ground
+
 # Discovery
 wq.catalog(); wq.categories(); wq.regions(); wq.domains()
 
@@ -98,6 +106,39 @@ Products are `regular`, `midgrade`, `premium` and `diesel` — `FUEL_PRODUCTS`,
 `fuel_prices()` is a different thing: the aggregated *series* behind the charts
 (EIA weekly for the US, StatCan monthly for Canada, CRE for Mexico), not
 station-level prices.
+
+## Geography
+
+Provinces, regions, municipalities, cities, towns, wards and neighbourhoods —
+with real, drawable boundaries, and with the places that cover the same ground
+kept side by side rather than merged into one.
+
+```python
+# The place list. "CA" and "CAN" find the same country, in both vocabularies.
+wq.geo_places(kind="city", country="CA", limit=50)
+wq.geo_places(source="osm", has_boundary=True)   # only places with an outline
+
+# One place: its containers AND the places inside it
+detail = wq.geo_place("osm:r1428125")
+print(detail["place"]["name"], len(detail["parents"]), len(detail["children"]))
+
+# The outline as GeoJSON — simplification is in METRES
+wq.geo_boundary("osm:r1428125", simplify=50)
+
+# "Which district is this?" — every container, broadest first, none picked
+stack = wq.geo_at(lon=-79.38, lat=43.65)
+for place in stack["places"]:
+    print(place["kind"], place["name"], place.get("country_code"))
+
+# The vocabulary, and the pairs of places covering the same ground
+wq.geo_concepts()
+wq.geo_overlaps(bbox="-79.6,43.5,-79.2,43.8", min_ratio=0.2)
+```
+
+A place belongs to **several** things at once — a neighbourhood is in a ward,
+in a city, in a census division, in a province and in a country. `parents` is a
+list on purpose. `bbox` is required on `geo_overlaps()`: comparing every pair in
+the country is a quadratic join.
 
 ## License
 

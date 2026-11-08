@@ -201,3 +201,113 @@ def test_api_key_falls_back_to_the_environment(monkeypatch):
     assert c2._http.headers["x-api-key"] == "wq_explicit"
     c.close()
     c2.close()
+
+
+# -- geography ------------------------------------------------------------------
+
+def test_geo_places_sends_every_filter():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"count": 0, "data": [], "limit": 50, "offset": 0})
+
+    _client(handler).geo_places(
+        kind="ward", source="osm", country="CA", q="yonge",
+        bbox="-79.6,43.5,-79.2,43.8", has_boundary=True, limit=200, offset=20)
+
+    assert captured["path"] == "/v1/geo/places"
+    url = captured["url"]
+    for fragment in ("kind=ward", "source=osm", "country=CA", "q=yonge",
+                     "bbox=-79.6%2C43.5%2C-79.2%2C43.8",
+                     "has_boundary=true", "limit=200", "offset=20"):
+        assert fragment in url, f"{fragment} missing from {url}"
+
+
+def test_geo_places_drops_the_filters_it_was_not_given():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"count": 0, "data": [], "limit": 50, "offset": 0})
+
+    _client(handler).geo_places(kind="city")
+    assert "kind=city" in captured["url"]
+    assert "country" not in captured["url"]
+    assert "bbox" not in captured["url"]
+
+
+def test_geo_place_returns_the_place_with_its_parents_and_children():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        return httpx.Response(200, json={
+            "uid": "osm:r1428125",
+            "place": {"uid": "osm:r1428125", "kind": "country", "name": "Canada"},
+            "parents": [],
+            "children": [{"uid": "osm:r1", "kind": "city", "name": "Ajax",
+                          "source": "osm", "area_ratio": 1.0, "is_primary": False}],
+        })
+
+    out = _client(handler).geo_place("osm:r1428125")
+    assert captured["path"] == "/v1/geo/places/osm:r1428125"
+    assert out["place"]["name"] == "Canada"
+    # The parents are a LIST: a place belongs to several things at once.
+    assert isinstance(out["parents"], list)
+    assert out["children"][0]["name"] == "Ajax"
+
+
+def test_geo_boundary_passes_simplify_in_metres():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"type": "FeatureCollection", "features": []})
+
+    out = _client(handler).geo_boundary("osm:r1428125", simplify=50)
+    assert captured["path"] == "/v1/geo/places/osm:r1428125/boundary"
+    assert "simplify=50" in captured["url"]
+    assert out["type"] == "FeatureCollection"
+
+
+def test_geo_at_sends_the_point():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"lon": -79.38, "lat": 43.65, "count": 0, "places": []})
+
+    _client(handler).geo_at(-79.38, 43.65)
+    assert captured["path"] == "/v1/geo/at"
+    assert "lon=-79.38" in captured["url"]
+    assert "lat=43.65" in captured["url"]
+
+
+def test_geo_concepts():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/geo/concepts"
+        return httpx.Response(200, json={"count": 1, "concepts": [], "sources": []})
+
+    out = _client(handler).geo_concepts()
+    assert out["count"] == 1
+
+
+def test_geo_overlaps_sends_the_box():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"bbox": {}, "min_ratio": 0.05,
+                                         "count": 0, "overlaps": []})
+
+    _client(handler).geo_overlaps("-79.6,43.5,-79.2,43.8", min_ratio=0.2, limit=50)
+    assert captured["path"] == "/v1/geo/overlaps"
+    url = captured["url"]
+    assert "bbox=-79.6%2C43.5%2C-79.2%2C43.8" in url
+    assert "min_ratio=0.2" in url
+    assert "limit=50" in url

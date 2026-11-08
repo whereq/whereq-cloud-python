@@ -28,6 +28,12 @@ from whereq_cloud.types import (
     FuelStation,
     FuelStationDetail,
     FuelStationsResponse,
+    GeoAtResponse,
+    GeoBoundary,
+    GeoConceptList,
+    GeoOverlapList,
+    GeoPlaceDetail,
+    GeoPlaceList,
     PriceSeriesResponse,
 )
 
@@ -293,3 +299,75 @@ class Client:
         """
         return self.get("/v1/prices", domain="fuel", region=region, geo=geo,
                         q=q, limit=limit, offset=offset)
+
+    # -- geography (places, boundaries, hierarchy) ---------------------------
+    def geo_places(self, kind: Optional[str] = None, source: Optional[str] = None,
+                   country: Optional[str] = None, q: Optional[str] = None,
+                   bbox: Optional[str] = None, has_boundary: Optional[bool] = None,
+                   limit: int = 50, offset: int = 0) -> GeoPlaceList:
+        """The place list — provinces, regions, municipalities, cities, towns,
+        wards, neighbourhoods, countries.
+
+        Args:
+            kind: one concept — ``country``, ``province``, ``region``,
+                ``municipality``, ``city``, ``town``, ``ward``,
+                ``neighbourhood``…
+            source: ``"osm"`` (the concept layer) or ``"geoboundaries"``
+                (the formal layer). Both are kept; they overlap.
+            country: ISO country code. Either spelling works — ``"CA"``
+                and ``"CAN"`` find the same places, in both vocabularies.
+            q: name search.
+            bbox: ``"minLon,minLat,maxLon,maxLat"``.
+            has_boundary: only places with a drawable outline.
+            limit: 1–200 rows per page.
+            offset: row offset for paging.
+        """
+        return self.get("/v1/geo/places", kind=kind, source=source,
+                        country=country, q=q, bbox=bbox,
+                        has_boundary=has_boundary, limit=limit, offset=offset)
+
+    def geo_place(self, uid: str) -> GeoPlaceDetail:
+        """One place, with its containers AND the places inside it.
+
+        The parents are a list on purpose: a place belongs to several
+        things at once.
+        """
+        return self.get(f"/v1/geo/places/{uid}")
+
+    def geo_boundary(self, uid: str, simplify: Optional[int] = None) -> GeoBoundary:
+        """A place's outline as GeoJSON.
+
+        ``simplify`` is in METRES: the outline keeps every corner more
+        than that far from the original, and the result is still a valid
+        polygon.
+        """
+        return self.get(f"/v1/geo/places/{uid}/boundary", simplify=simplify)
+
+    def geo_at(self, lon: float, lat: float) -> GeoAtResponse:
+        """Every place containing a point, broadest first.
+
+        The answer to "which district is this?" without picking a winner:
+        a point downtown Toronto lands in a neighbourhood, a ward, a
+        city, a census division, a province and a country, and all of
+        them are returned.
+        """
+        return self.get("/v1/geo/at", lon=lon, lat=lat)
+
+    def geo_concepts(self) -> GeoConceptList:
+        """The vocabulary: every concept, in both languages, with a live
+        count of how many places and outlines it has."""
+        return self.get("/v1/geo/concepts")
+
+    def geo_overlaps(self, bbox: str, min_ratio: Optional[float] = None,
+                     limit: Optional[int] = None) -> GeoOverlapList:
+        """The places of different kinds that cover the same ground.
+
+        Args:
+            bbox: ``"minLon,minLat,maxLon,maxLat"`` — required. Comparing
+                every pair in the country is a quadratic join, and nobody
+                asks that question about all of Canada at once.
+            min_ratio: the smallest overlap worth reporting.
+            limit: how many pairs to return.
+        """
+        return self.get("/v1/geo/overlaps", bbox=bbox, min_ratio=min_ratio,
+                        limit=limit)
