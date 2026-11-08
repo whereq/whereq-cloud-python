@@ -22,6 +22,19 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      # Fail fast on a stale version. The build publishes the version in
+      # pyproject.toml, not the tag string — so a tag left over from the
+      # previous release would try to re-upload a version PyPI already has
+      # ("file already exists") instead of the release you meant to ship.
+      - name: verify the tag matches the package version
+        run: |
+          pkg_version="$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$pkg_version" != "$tag_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pyproject.toml version $pkg_version"
+            exit 1
+          fi
+          echo "Publishing version $pkg_version"
       - run: pip install -e . pytest && python -m pytest -q   # green bar before publish
       - run: pip install build && python -m build
       - uses: pypa/gh-action-pypi-publish@release/v1

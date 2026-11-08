@@ -32,8 +32,13 @@ That's it. `pip install -U whereq.cloud` picks up the new version within a minut
 ## Rules / gotchas
 
 - **Tag must match the version** in `pyproject.toml` (tag `v0.2.0` ⇒ version `0.2.0`). A mismatch
-  publishes the version in `pyproject.toml`, not the tag string.
+  publishes the version in `pyproject.toml`, not the tag string. The `Release` workflow now
+  **fails fast** on a mismatch (`verify the tag matches the package version`) instead of
+  uploading a stale version and having PyPI reject it as a duplicate.
 - **Never re-use a version** — PyPI refuses to overwrite an existing version. Bump and re-tag.
+- `__version__` in `src/whereq_cloud/client.py` must equal the `pyproject.toml` version —
+  `test_version_matches_pyproject` enforces it, and the version also rides along in the
+  `User-Agent` header.
 - The release job runs the tests first (green bar) before building/publishing.
 - Import name stays `whereq_cloud` regardless of the PyPI project name `whereq.cloud`.
 
