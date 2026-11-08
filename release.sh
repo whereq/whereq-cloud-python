@@ -24,7 +24,7 @@ PACKAGE="whereq.cloud"
 PYPROJECT="pyproject.toml"
 CLIENT_PY="src/whereq_cloud/client.py"
 BRANCH="main"
-POLL_ATTEMPTS=30
+POLL_ATTEMPTS="${POLL_ATTEMPTS:-30}"
 
 DRY_RUN=0
 SUMMARY=""
@@ -282,9 +282,11 @@ ok "tag v$VERSION pushed — the Release workflow is on its way"
 info "waiting for the Release workflow"
 RUN_ID=""
 for _ in $(seq 1 "$POLL_ATTEMPTS"); do
-  RUN_ID="$(gh run list --workflow release.yml --limit 10 \
-    --json databaseId,headBranch \
-    --jq '.[] | select(.headBranch == "v'"$VERSION"'") | .databaseId' | head -n 1)"
+  # Tolerate a transient gh failure here: the tag is already pushed, so
+  # aborting now would leave the release un-watched rather than unfinished.
+  RUN_ID="$( { gh run list --workflow release.yml --limit 10 \
+      --json databaseId,headBranch \
+      --jq '.[] | select(.headBranch == "v'"$VERSION"'") | .databaseId' 2>/dev/null || true; } | head -n 1 )"
   [ -n "$RUN_ID" ] && break
   sleep 3
 done
