@@ -5,6 +5,21 @@ via Trusted Publishing (OIDC).** No tokens are stored anywhere.
 
 ## Release a new version (the recurring steps)
 
+Use the script — it does all of the below and refuses to push a half-finished release:
+
+```bash
+./release.sh 0.6.1 "the geography endpoints"    # explicit version
+./release.sh patch                              # or let it compute the bump
+./release.sh minor --dry-run                    # preview: checks + tests, pushes nothing
+```
+
+`release.sh` bumps the version in **both** `pyproject.toml` and
+`src/whereq_cloud/client.py`, runs the tests, commits, pushes `main`, pushes the tag,
+watches the Release workflow and verifies the version on PyPI. It stops before touching
+anything remote if any precondition fails.
+
+If you'd rather do it by hand, the steps are:
+
 1. **Bump the version** in `pyproject.toml` → `[project] version = "X.Y.Z"`.
    (Keep it in sync with the tag you'll push — the tag is `v` + this version.)
 2. **Update the code / README** as needed; make sure tests pass locally:
@@ -28,6 +43,11 @@ via Trusted Publishing (OIDC).** No tokens are stored anywhere.
    ```
 
 That's it. `pip install -U whereq.cloud` picks up the new version within a minute or two.
+
+> **The step people forget.** Pushing to `main` does not publish — only the **tag** does.
+> A feature merged without a version bump and a tag sits on PyPI forever without anyone
+> noticing, because CI stays green. That is why `release.sh` checks for an existing tag
+> and an existing PyPI version *before* it touches anything.
 
 ## Rules / gotchas
 
