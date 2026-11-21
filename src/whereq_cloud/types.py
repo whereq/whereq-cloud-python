@@ -335,3 +335,241 @@ class GeoBoundary(TypedDict, total=False):
 
     type: str
     features: list[dict]
+
+
+# -- local (news, events, stories, places) -----------------------------------
+
+
+class LocalContent(TypedDict, total=False):
+    """One item from a local feed — a story, an event, a notice."""
+
+    id: int
+    type: str
+    category: Optional[str]
+    title: str
+    summary: Optional[str]
+    description: Optional[str]
+    source_name: Optional[str]
+    source_url: Optional[str]
+    url: Optional[str]
+    publish_time: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    city: Optional[str]
+    province: Optional[str]
+    country: Optional[str]
+    geocode_status: Optional[str]
+    confidence_score: Optional[float]
+    status: str
+    expires_at: Optional[str]
+    tags: list[str]
+
+
+class LocalContentList(TypedDict, total=False):
+    """``GET /v1/local/content`` — the page envelope."""
+
+    data: list[LocalContent]
+    pagination: dict
+
+
+class LocalContentDetail(LocalContent, total=False):
+    """``GET /v1/local/content/{id}`` — one item, with its tags."""
+
+    tags: list[str]
+
+
+class LocalPlace(TypedDict, total=False):
+    """One point of interest."""
+
+    id: int
+    source: str
+    source_url: Optional[str]
+    license: Optional[str]
+    external_id: str
+    name: str
+    latitude: Optional[float]
+    longitude: Optional[float]
+    city: Optional[str]
+    province: Optional[str]
+    country: Optional[str]
+    category: Optional[str]
+    kind: Optional[str]
+    metadata: dict
+
+
+class LocalPlaceList(TypedDict, total=False):
+    """``GET /v1/local/places`` — the page envelope."""
+
+    data: list[LocalPlace]
+    pagination: dict
+
+
+class LocalPlaceDetail(LocalPlace, total=False):
+    """``GET /v1/local/places/{id}`` — one place."""
+
+
+class LocalSource(TypedDict, total=False):
+    """One configured local feed."""
+
+    slug: str
+    name: str
+    kind: str
+    url: Optional[str]
+    default_type: Optional[str]
+    default_city: Optional[str]
+    default_province: Optional[str]
+    default_country: Optional[str]
+    enabled: bool
+    crawl_interval_minutes: int
+
+
+class LocalSourceList(TypedDict, total=False):
+    """``GET /v1/local/sources`` — the page envelope."""
+
+    data: list[LocalSource]
+    pagination: dict
+
+
+class LocalTaxonomy(TypedDict, total=False):
+    """``GET /v1/local/taxonomy`` — the vocabulary, in one call."""
+
+    types: list[dict]
+    categories: list[dict]
+    place_categories: list[dict]
+    sources: list[dict]
+
+
+# -- schools -------------------------------------------------------------------
+
+
+class SchoolBoard(TypedDict, total=False):
+    """One school board."""
+
+    slug: str
+    name: str
+    type: Optional[str]
+    region: Optional[str]
+    school_count: int
+
+
+class SchoolSummary(TypedDict, total=False):
+    """One school.
+
+    The ``hs_*`` fields are **present only when the API key holds the
+    ``school_licensed`` scope**. Without it they are absent — not null —
+    so a caller can tell "you are not entitled to this" from "there is no
+    value here".
+    """
+
+    uid: str
+    name: str
+    type: Optional[str]
+    status: Optional[str]
+    province: Optional[str]
+    region: Optional[str]
+    city: Optional[str]
+    municipality: Optional[str]
+    board: Optional[SchoolBoard]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    grade_range: Optional[str]
+    programs: list[str]
+    has_boundary: bool
+    source: Optional[str]
+    source_url: Optional[str]
+    license: Optional[str]
+    hs_score: Optional[float]
+    hs_rank: Optional[int]
+    hs_rank_total: Optional[int]
+    hs_school_type: Optional[str]
+
+
+class SchoolList(TypedDict, total=False):
+    """``GET /v1/schools`` — the page envelope."""
+
+    data: list[SchoolSummary]
+    pagination: dict
+
+
+class SchoolScores(TypedDict, total=False):
+    """One school's yearly assessment snapshot.
+
+    Licensed: the route needs the ``school_licensed`` scope.
+    """
+
+    uid: str
+    year: int
+    rank: Optional[int]
+    rank_total: Optional[int]
+    rank_score: Optional[float]
+    avg_exam_mark: Optional[float]
+    year_label: Optional[str]
+    source: Optional[str]
+    eqao: list[dict]
+
+
+class SchoolDetail(SchoolSummary, total=False):
+    """``GET /v1/schools/{uid}`` — one school, with its contact block.
+
+    ``scores`` is present only with the ``school_licensed`` scope.
+    """
+
+    address: Optional[str]
+    phone: Optional[str]
+    phone2: Optional[str]
+    fax: Optional[str]
+    website_url: Optional[str]
+    boundary_pdf_url: Optional[str]
+    principal: Optional[str]
+    feeder_schools: Optional[dict]
+    extra: Optional[dict]
+    scores: list[SchoolScores]
+
+
+class SchoolBoundary(TypedDict, total=False):
+    """``GET /v1/schools/{uid}/boundary`` — the catchment outline.
+
+    Licensed. The geometry is a GeoJSON ``MultiPolygon`` — a school may
+    have several catchments, and a bare ``Polygon`` would lose the others.
+    """
+
+    uid: str
+    name: str
+    geometry: Optional[dict]
+    polygon_count: int
+    point_count: int
+    source: Optional[str]
+    source_url: Optional[str]
+    license: Optional[str]
+
+
+class CatchmentHit(TypedDict, total=False):
+    """One catchment covering a queried point."""
+
+    uid: str
+    name: str
+    type: Optional[str]
+    distance_m: Optional[float]
+
+
+class CatchmentList(TypedDict, total=False):
+    """``GET /v1/schools/at`` — the page envelope."""
+
+    data: list[CatchmentHit]
+    pagination: dict
+
+
+class SchoolTaxonomy(TypedDict, total=False):
+    """``GET /v1/schools/taxonomy`` — the vocabulary and the headline counts."""
+
+    boards: list[SchoolBoard]
+    types: list[dict]
+    program_categories: list[dict]
+    stats: dict
+
+
+class SchoolBoardList(TypedDict, total=False):
+    """``GET /v1/schools/boards`` — the page envelope."""
+
+    data: list[SchoolBoard]
+    pagination: dict

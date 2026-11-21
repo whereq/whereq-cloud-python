@@ -34,7 +34,20 @@ from whereq_cloud.types import (
     GeoOverlapList,
     GeoPlaceDetail,
     GeoPlaceList,
+    LocalContentDetail,
+    LocalContentList,
+    LocalPlaceDetail,
+    LocalPlaceList,
+    LocalSourceList,
+    LocalTaxonomy,
     PriceSeriesResponse,
+    SchoolBoardList,
+    SchoolBoundary,
+    SchoolDetail,
+    SchoolList,
+    SchoolScores,
+    SchoolTaxonomy,
+    CatchmentList,
 )
 
 __version__ = "0.6.0"
@@ -371,3 +384,139 @@ class Client:
         """
         return self.get("/v1/geo/overlaps", bbox=bbox, min_ratio=min_ratio,
                         limit=limit)
+
+    # -- local (news, events, stories, places) ------------------------------
+    def local_content(self, type: Optional[str] = None, category: Optional[str] = None,
+                      source: Optional[str] = None, city: Optional[str] = None,
+                      province: Optional[str] = None, bbox: Optional[str] = None,
+                      q: Optional[str] = None, since: Optional[str] = None,
+                      until: Optional[str] = None,
+                      has_location: Optional[bool] = None,
+                      include_expired: bool = False,
+                      limit: int = 50, cursor: Optional[str] = None) -> LocalContentList:
+        """The local feed — news, events, stories and notices.
+
+        Args:
+            type: ``news``, ``event``, ``story``…
+            category: the feed's own category.
+            source: the feed's slug.
+            city / province: where it happened.
+            bbox: ``"minLon,minLat,maxLon,maxLat"``.
+            q: free text.
+            since / until: ISO timestamps.
+            has_location: only items with a position.
+            include_expired: expired content is filtered out by default.
+            limit: rows per page.
+            cursor: the next page's cursor.
+        """
+        return self.get("/v1/local/content", type=type, category=category,
+                        source=source, city=city, province=province, bbox=bbox,
+                        q=q, since=since, until=until,
+                        has_location=has_location,
+                        include_expired=include_expired, limit=limit, cursor=cursor)
+
+    def local_content_item(self, content_id: int) -> LocalContentDetail:
+        """One item, with its tags."""
+        return self.get(f"/v1/local/content/{content_id}")
+
+    def local_places(self, category: Optional[str] = None, kind: Optional[str] = None,
+                     sub: Optional[str] = None, bbox: Optional[str] = None,
+                     lat: Optional[float] = None, lng: Optional[float] = None,
+                     radius_km: Optional[float] = None, q: Optional[str] = None,
+                     limit: int = 50, offset: int = 0) -> LocalPlaceList:
+        """The points of interest — the OpenStreetMap sweep.
+
+        Args:
+            category: the POI category.
+            kind: the POI kind.
+            sub: a sub-category.
+            bbox: ``"minLon,minLat,maxLon,maxLat"``.
+            lat / lng / radius_km: a proximity search — give all three.
+            q: free text.
+            limit / offset: paging.
+        """
+        return self.get("/v1/local/places", category=category, kind=kind,
+                        sub=sub, bbox=bbox, lat=lat, lng=lng,
+                        radius_km=radius_km, q=q, limit=limit, offset=offset)
+
+    def local_place(self, place_id: int) -> LocalPlaceDetail:
+        """One place."""
+        return self.get(f"/v1/local/places/{place_id}")
+
+    def local_sources(self, enabled: Optional[bool] = None,
+                      kind: Optional[str] = None,
+                      limit: int = 100) -> LocalSourceList:
+        """The configured local feeds."""
+        return self.get("/v1/local/sources", enabled=enabled, kind=kind, limit=limit)
+
+    def local_taxonomy(self) -> LocalTaxonomy:
+        """The local vocabulary — types, categories, place categories, sources."""
+        return self.get("/v1/local/taxonomy")
+
+    # -- schools -------------------------------------------------------------
+    def schools(self, q: Optional[str] = None, board: Optional[str] = None,
+                city: Optional[str] = None, province: Optional[str] = None,
+                type: Optional[str] = None, bbox: Optional[str] = None,
+                lat: Optional[float] = None, lng: Optional[float] = None,
+                radius_km: Optional[float] = None,
+                has_boundary: Optional[bool] = None,
+                limit: int = 50, offset: int = 0) -> SchoolList:
+        """The school directory.
+
+        Args:
+            q: name or city search.
+            board: the board's slug (``ycdsb``, ``tdsb``…).
+            city / province: where the school is.
+            type: ``elementary``, ``secondary``, ``combined`` or ``other``.
+            bbox: ``"minLon,minLat,maxLon,maxLat"``.
+            lat / lng / radius_km: a proximity search — give all three.
+            has_boundary: only schools that have (or do not have) a catchment.
+            limit / offset: paging.
+        """
+        return self.get("/v1/schools", q=q, board=board, city=city,
+                        province=province, type=type, bbox=bbox,
+                        lat=lat, lng=lng, radius_km=radius_km,
+                        has_boundary=has_boundary, limit=limit, offset=offset)
+
+    def school_boards(self) -> SchoolBoardList:
+        """The board registry — the vocabulary the ``board`` filter uses."""
+        return self.get("/v1/schools/boards")
+
+    def school_taxonomy(self) -> SchoolTaxonomy:
+        """The school vocabulary and the headline counts."""
+        return self.get("/v1/schools/taxonomy")
+
+    def schools_at(self, lat: float, lng: float, limit: int = 20) -> CatchmentList:
+        """The catchments that cover a point.
+
+        **Licensed.** This reads the catchment polygons, so it needs the
+        ``school_licensed`` scope — a key without it gets a 403.
+        """
+        return self.get("/v1/schools/at", lat=lat, lng=lng, limit=limit)
+
+    def school(self, uid: str) -> SchoolDetail:
+        """One school.
+
+        The uid is board-qualified — ``ycdsb/0158``, or
+        ``ycdsb/st-theresa-of-lisieux-chs`` when the board publishes no
+        code. It carries a slash, and the API's route is built for that.
+
+        The scores come back only with the ``school_licensed`` scope.
+        """
+        return self.get(f"/v1/schools/{uid}")
+
+    def school_boundary(self, uid: str,
+                        simplify: Optional[int] = None) -> SchoolBoundary:
+        """A school's catchment outline, as GeoJSON.
+
+        **Licensed.** ``simplify`` is in METRES.
+        """
+        return self.get(f"/v1/schools/{uid}/boundary", simplify=simplify)
+
+    def school_scores(self, uid: str, year: Optional[int] = None) -> SchoolScores:
+        """One year's assessment snapshot, with the EQAO marks.
+
+        **Licensed.** ``year`` picks a year; the latest is the default.
+        """
+        return self.get(f"/v1/schools/{uid}/scores", year=year)
+

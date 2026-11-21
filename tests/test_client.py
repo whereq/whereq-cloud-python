@@ -311,3 +311,131 @@ def test_geo_overlaps_sends_the_box():
     assert "bbox=-79.6%2C43.5%2C-79.2%2C43.8" in url
     assert "min_ratio=0.2" in url
     assert "limit=50" in url
+
+
+# -- the local layer ----------------------------------------------------------
+
+
+def test_local_content_sends_every_filter():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    _client(handler).local_content(
+        type="news", category="weather", source="city", city="Toronto",
+        province="ON", bbox="-79.6,43.5,-79.2,43.8", q="storm",
+        since="2026-01-01T00:00:00Z", until="2026-02-01T00:00:00Z",
+        has_location=True, include_expired=True, limit=10, cursor="abc")
+
+    assert captured["path"] == "/v1/local/content"
+    url = captured["url"]
+    for fragment in ("type=news", "category=weather", "source=city",
+                     "city=Toronto", "province=ON", "q=storm",
+                     "has_location=true", "include_expired=true",
+                     "limit=10", "cursor=abc"):
+        assert fragment in url, f"{fragment} missing from {url}"
+
+
+def test_local_content_item_and_place_paths():
+    captured = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request.url.path)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    c = _client(handler)
+    c.local_content_item(42)
+    c.local_place(7)
+    c.local_sources()
+    c.local_taxonomy()
+    assert captured == ["/v1/local/content/42", "/v1/local/places/7",
+                        "/v1/local/sources", "/v1/local/taxonomy"]
+
+
+def test_local_places_passes_the_proximity_search():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    _client(handler).local_places(category="food", kind="poi",
+                                  lat=43.65, lng=-79.38, radius_km=5)
+    url = captured["url"]
+    for fragment in ("category=food", "kind=poi", "lat=43.65",
+                     "lng=-79.38", "radius_km=5"):
+        assert fragment in url, f"{fragment} missing from {url}"
+
+
+# -- the schools --------------------------------------------------------------
+
+
+def test_schools_sends_every_filter():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    _client(handler).schools(
+        q="theresa", board="ycdsb", city="Richmond Hill", province="ON",
+        type="secondary", bbox="-79.6,43.5,-79.2,43.8",
+        lat=43.9, lng=-79.4, radius_km=10, has_boundary=True,
+        limit=25, offset=50)
+
+    assert captured["path"] == "/v1/schools"
+    url = captured["url"]
+    for fragment in ("q=theresa", "board=ycdsb", "city=Richmond+Hill",
+                     "province=ON", "type=secondary", "has_boundary=true",
+                     "limit=25", "offset=50"):
+        assert fragment in url, f"{fragment} missing from {url}"
+
+
+def test_the_school_uid_keeps_its_slash():
+    """The uid is board-qualified — ``ycdsb/0158`` — and the slash is part
+    of the id, not a path separator the client should have encoded away."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["raw"] = str(request.url)
+        return httpx.Response(200, json={"uid": "ycdsb/0158"})
+
+    _client(handler).school("ycdsb/0158")
+    assert captured["path"] == "/v1/schools/ycdsb/0158"
+    assert "ycdsb/0158" in captured["raw"]
+
+
+def test_the_school_routes_reach_their_paths():
+    captured = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request.url.path)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    c = _client(handler)
+    c.school_boards()
+    c.school_taxonomy()
+    c.schools_at(lat=43.9, lng=-79.4)
+    c.school_boundary("ycdsb/0158", simplify=50)
+    c.school_scores("ycdsb/0158", year=2024)
+    assert captured == ["/v1/schools/boards", "/v1/schools/taxonomy",
+                        "/v1/schools/at", "/v1/schools/ycdsb/0158/boundary",
+                        "/v1/schools/ycdsb/0158/scores"]
+
+
+def test_the_licensed_school_routes_raise_on_403():
+    """A key without ``school_licensed`` gets a 403, not a 200 with the
+    licensed fields quietly missing."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"detail": "missing scope"})
+
+    try:
+        _client(handler).school_boundary("ycdsb/0158")
+        assert False, "expected WhereqError"
+    except WhereqError as e:
+        assert e.status == 403
