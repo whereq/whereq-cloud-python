@@ -455,28 +455,49 @@ class Client:
 
     # -- schools -------------------------------------------------------------
     def schools(self, q: Optional[str] = None, board: Optional[str] = None,
+                board_type: Optional[str] = None, region: Optional[str] = None,
                 city: Optional[str] = None, province: Optional[str] = None,
-                type: Optional[str] = None, bbox: Optional[str] = None,
+                type: Optional[str] = None, program: Optional[str] = None,
+                bbox: Optional[str] = None,
                 lat: Optional[float] = None, lng: Optional[float] = None,
                 radius_km: Optional[float] = None,
                 has_boundary: Optional[bool] = None,
+                sort: str = "name", order: str = "asc",
+                rank: bool = False,
                 limit: int = 50, offset: int = 0) -> SchoolList:
         """The school directory.
 
         Args:
             q: name or city search.
             board: the board's slug (``ycdsb``, ``tdsb``…).
+            board_type: the board's own type — ``public``, ``catholic`` or
+                ``private``.
+            region: the board's region, matched loosely (``"York"``).
             city / province: where the school is.
             type: ``elementary``, ``secondary``, ``combined`` or ``other``.
+            program: a programme **code** (``french_immersion``).
             bbox: ``"minLon,minLat,maxLon,maxLat"``.
             lat / lng / radius_km: a proximity search — give all three.
             has_boundary: only schools that have (or do not have) a catchment.
-            limit / offset: paging.
+            sort: one of ``name``, ``hs_score``, ``hs_rank``, ``grade_range``,
+                ``type``, ``city``. Anything else is a 422.
+            order: ``asc`` or ``desc``.
+            rank: order name matches by relevance — exact, then prefix, then
+                a word that starts with the query, then any substring.
+            limit / offset: paging. The limit goes to **5 000**: the map
+                needs a whole viewport in one call, and the whole directory
+                is 2 528 schools.
+
+        The programmes come back as **codes** (``french_immersion``), not
+        labels — the code is what the ``program`` filter takes and what the
+        taxonomy lists as its ``id``. The labels are in the taxonomy.
         """
-        return self.get("/v1/schools", q=q, board=board, city=city,
-                        province=province, type=type, bbox=bbox,
+        return self.get("/v1/schools", q=q, board=board, board_type=board_type,
+                        region=region, city=city, province=province, type=type,
+                        program=program, bbox=bbox,
                         lat=lat, lng=lng, radius_km=radius_km,
-                        has_boundary=has_boundary, limit=limit, offset=offset)
+                        has_boundary=has_boundary, sort=sort, order=order,
+                        rank=rank, limit=limit, offset=offset)
 
     def school_boards(self) -> SchoolBoardList:
         """The board registry — the vocabulary the ``board`` filter uses."""

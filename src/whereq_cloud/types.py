@@ -449,6 +449,7 @@ class SchoolBoard(TypedDict, total=False):
     name: str
     type: Optional[str]
     region: Optional[str]
+    province: Optional[str]
     school_count: int
 
 
@@ -461,12 +462,25 @@ class SchoolSummary(TypedDict, total=False):
     value here".
     """
 
+    id: int
+    """The platform's own row id.
+
+    **Not an identifier** — the ``uid`` is — but the join key for the
+    migration: whereq.com's school rows carry the same integers, because
+    the import preserved them. It changes if the dataset is reloaded.
+    """
     uid: str
     name: str
     type: Optional[str]
     status: Optional[str]
     province: Optional[str]
     region: Optional[str]
+    """The **board's** region — ``York Region``, ``Toronto``.
+
+    This is what the ``region`` filter matches. The school row's own
+    ``region`` column holds a denormalised province name and is not
+    served.
+    """
     city: Optional[str]
     municipality: Optional[str]
     board: Optional[SchoolBoard]
@@ -474,6 +488,11 @@ class SchoolSummary(TypedDict, total=False):
     longitude: Optional[float]
     grade_range: Optional[str]
     programs: list[str]
+    """The programme **codes** (``french_immersion``), not the labels.
+
+    The code is what the ``program`` filter takes and what the taxonomy
+    lists as its ``id``; the labels are in the taxonomy.
+    """
     has_boundary: bool
     source: Optional[str]
     source_url: Optional[str]
@@ -524,6 +543,12 @@ class SchoolDetail(SchoolSummary, total=False):
     feeder_schools: Optional[dict]
     extra: Optional[dict]
     scores: list[SchoolScores]
+    # The licensed block. Present only with the ``school_licensed`` scope.
+    hs_name: Optional[str]
+    hs_board_type: Optional[str]
+    hs_score_year: Optional[int]
+    hs_score_average: Optional[float]
+    hs_rank_year: Optional[int]
 
 
 class SchoolBoundary(TypedDict, total=False):
@@ -549,6 +574,8 @@ class CatchmentHit(TypedDict, total=False):
     uid: str
     name: str
     type: Optional[str]
+    board: Optional[str]
+    polygon_index: int
     distance_m: Optional[float]
 
 
@@ -560,12 +587,26 @@ class CatchmentList(TypedDict, total=False):
 
 
 class SchoolTaxonomy(TypedDict, total=False):
-    """``GET /v1/schools/taxonomy`` — the vocabulary and the headline counts."""
+    """``GET /v1/schools/taxonomy`` — the vocabulary and the headline counts.
+
+    The whole vocabulary comes in one call: the boards, the school types,
+    the programmes, the provinces, the boards' own regions and the board
+    types — plus the headline counts and their breakdowns.
+    """
 
     boards: list[SchoolBoard]
     types: list[dict]
     program_categories: list[dict]
+    """The programmes, as ``{"id": <code>, "name": <label>}``."""
+    provinces: list[dict]
+    """The provinces, by code. The *names* come from the geography feed."""
+    regions: list[dict]
+    """The boards' own regions, each with its province."""
+    board_types: list[dict]
+    """The boards' own types — public, catholic, private."""
     stats: dict
+    """The headline counts, with the breakdowns by province, board type
+    and school type."""
 
 
 class SchoolBoardList(TypedDict, total=False):

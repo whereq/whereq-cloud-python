@@ -395,6 +395,41 @@ def test_schools_sends_every_filter():
         assert fragment in url, f"{fragment} missing from {url}"
 
 
+def test_schools_sends_the_growth_filters():
+    """The directory grew the filters whereq.com's own API had, so a
+    caller can ask the same questions of both."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    _client(handler).schools(
+        board_type="catholic", region="York", program="french_immersion",
+        sort="hs_score", order="desc", rank=True)
+
+    url = captured["url"]
+    for fragment in ("board_type=catholic", "region=York",
+                     "program=french_immersion", "sort=hs_score",
+                     "order=desc", "rank=true"):
+        assert fragment in url, f"{fragment} missing from {url}"
+
+
+def test_schools_defaults_to_the_name_order():
+    """The default ordering is the one the directory has always used."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    _client(handler).schools()
+    url = captured["url"]
+    assert "sort=name" in url, url
+    assert "order=asc" in url, url
+    assert "rank=false" in url, url
+
+
 def test_the_school_uid_keeps_its_slash():
     """The uid is board-qualified — ``ycdsb/0158`` — and the slash is part
     of the id, not a path separator the client should have encoded away."""
