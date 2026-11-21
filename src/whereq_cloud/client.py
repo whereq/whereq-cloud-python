@@ -30,6 +30,7 @@ from whereq_cloud.types import (
     FuelStationsResponse,
     GeoAtResponse,
     GeoBoundary,
+    GeoBoundaryList,
     GeoConceptList,
     GeoOverlapList,
     GeoPlaceDetail,
@@ -355,6 +356,33 @@ class Client:
         polygon.
         """
         return self.get(f"/v1/geo/places/{uid}/boundary", simplify=simplify)
+
+    def geo_boundaries(self, bbox: Optional[str] = None,
+                       kind: Optional[str] = None,
+                       source: Optional[str] = None,
+                       simplify_m: float = 50.0,
+                       limit: int = 200) -> GeoBoundaryList:
+        """Every outline in a viewport, in one response.
+
+        This is the route a map needs. Asking for one outline at a time is
+        fine when the customer wants one outline; it is unusable when a pan
+        wants a whole viewport's worth of them — that is one request per
+        polygon, far past the rate the API allows.
+
+        Args:
+            bbox: ``"minLon,minLat,maxLon,maxLat"`` — the viewport.
+            kind: one or more concepts, comma separated.
+            source: one or more sources, comma separated.
+            simplify_m: simplification tolerance in METRES (0 = exact).
+            limit: how many outlines to return, 1–1000.
+
+        The answer carries ``count`` (how many matched) and ``truncated``
+        (whether the limit cut the answer short), and the outlines come
+        back **smallest first**, so a truncated answer drops the large
+        areas rather than the wards the user is looking at.
+        """
+        return self.get("/v1/geo/boundaries", bbox=bbox, kind=kind,
+                        source=source, simplify_m=simplify_m, limit=limit)
 
     def geo_at(self, lon: float, lat: float) -> GeoAtResponse:
         """Every place containing a point, broadest first.

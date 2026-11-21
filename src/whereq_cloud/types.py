@@ -300,6 +300,7 @@ class GeoAtPlace(TypedDict, total=False):
     name_en: Optional[str]
     name_zh: Optional[str]
     source: str
+    license: Optional[str]
     raw_admin_level: Optional[int]
     raw_place: Optional[str]
     population: Optional[int]
@@ -335,6 +336,42 @@ class GeoBoundary(TypedDict, total=False):
 
     type: str
     features: list[dict]
+
+
+class GeoBoundaryItem(TypedDict, total=False):
+    """One outline from ``GET /v1/geo/boundaries``.
+
+    The geometry is a GeoJSON geometry — a Polygon or a MultiPolygon.
+    ``license`` and ``source_url`` are the attribution the open licences
+    require, and they travel with the row.
+    """
+
+    uid: str
+    name: str
+    kind: str
+    source: str
+    source_url: Optional[str]
+    license: Optional[str]
+    area_km2: Optional[float]
+    centroid_lon: Optional[float]
+    centroid_lat: Optional[float]
+    simplified_m: float
+    geometry: dict
+
+
+class GeoBoundaryList(TypedDict):
+    """``GET /v1/geo/boundaries`` — every outline in a viewport.
+
+    ``count`` is how many outlines matched the filters; ``truncated`` says
+    whether the limit cut the answer short. A client that draws polygons
+    must be able to tell "that is all of them" from "that is the first
+    two hundred", or it will draw a map with holes in it.
+    """
+
+    count: int
+    truncated: bool
+    limit: int
+    items: list[GeoBoundaryItem]
 
 
 # -- local (news, events, stories, places) -----------------------------------

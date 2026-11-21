@@ -474,3 +474,49 @@ def test_the_licensed_school_routes_raise_on_403():
         assert False, "expected WhereqError"
     except WhereqError as e:
         assert e.status == 403
+
+
+def test_geo_boundaries_sends_the_viewport_and_every_filter():
+    """The bulk geometry surface — a viewport's outlines in one request."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"count": 0, "truncated": False,
+                                         "limit": 200, "items": []})
+
+    out = _client(handler).geo_boundaries(
+        bbox="-79.55,43.60,-79.25,43.75", kind="ward", source="osm",
+        simplify_m=25, limit=50)
+    assert captured["path"] == "/v1/geo/boundaries"
+    assert "bbox=-79.55%2C43.60%2C-79.25%2C43.75" in captured["url"]
+    assert "kind=ward" in captured["url"]
+    assert "source=osm" in captured["url"]
+    assert "simplify_m=25" in captured["url"]
+    assert "limit=50" in captured["url"]
+    assert out["truncated"] is False
+
+
+def test_geo_boundaries_keeps_the_attribution_on_every_item():
+    """ODbL and CC-BY both require the attribution to travel with the data."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["path"] = request.url.path
+        return httpx.Response(200, json={
+            "count": 1, "truncated": False, "limit": 200,
+            "items": [{
+                "uid": "osm:r1428125", "name": "Canada", "kind": "country",
+                "source": "osm", "source_url": "https://www.openstreetmap.org/relation/1428125",
+                "license": "ODbL 1.0 (OpenStreetMap contributors)",
+                "area_km2": 9984670.0, "simplified_m": 50.0,
+                "geometry": {"type": "MultiPolygon", "coordinates": []},
+            }],
+        })
+
+    out = _client(handler).geo_boundaries()
+    item = out["items"][0]
+    assert item["license"].startswith("ODbL")
+    assert item["source_url"]
+    assert item["geometry"]["type"] == "MultiPolygon"
