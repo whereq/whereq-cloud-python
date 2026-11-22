@@ -51,7 +51,7 @@ from whereq_cloud.types import (
     CatchmentList,
 )
 
-__version__ = "0.8.1"
+__version__ = "0.9.0"
 DEFAULT_BASE_URL = "https://api.whereq.cloud"
 
 #: Re-exported so callers can validate a filter before spending a request.
