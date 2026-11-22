@@ -333,7 +333,7 @@ class Client:
             q: name search.
             bbox: ``"minLon,minLat,maxLon,maxLat"``.
             has_boundary: only places with a drawable outline.
-            limit: 1–200 rows per page.
+            limit: 1–500 rows per page.
             offset: row offset for paging.
         """
         return self.get("/v1/geo/places", kind=kind, source=source,
@@ -435,8 +435,10 @@ class Client:
             source: the feed's slug.
             city / province: where it happened.
             bbox: ``"minLon,minLat,maxLon,maxLat"``.
-            q: free text.
-            since / until: ISO timestamps.
+            q: free text — 1 to 200 characters.
+            since / until: ISO timestamps, on the same clock the feed sorts
+                by (the publish time, or the row's creation time when it
+                has no publish time).
             has_location: only items with a position.
             include_expired: expired content is filtered out by default.
             limit: rows per page.
@@ -465,7 +467,7 @@ class Client:
             sub: a sub-category.
             bbox: ``"minLon,minLat,maxLon,maxLat"``.
             lat / lng / radius_km: a proximity search — give all three.
-            q: free text.
+            q: free text — 1 to 200 characters.
             limit / offset: paging.
         """
         return self.get("/v1/local/places", category=category, kind=kind,
@@ -519,11 +521,17 @@ class Client:
                 a word that starts with the query, then any substring.
             limit / offset: paging. The limit goes to **5 000**: the map
                 needs a whole viewport in one call, and the whole directory
-                is 2 528 schools.
+                is 2 647 schools.
 
         The programmes come back as **codes** (``french_immersion``), not
         labels — the code is what the ``program`` filter takes and what the
         taxonomy lists as its ``id``. The labels are in the taxonomy.
+
+        The envelope's ``pagination`` carries ``next_offset`` — the offset
+        the next page starts at, as an **integer**, when a full page came
+        back, and ``null`` on the last one. It is not a cursor: the route
+        pages by offset and has no cursor parameter, so it can be passed
+        straight back as ``offset``.
         """
         return self.get("/v1/schools", q=q, board=board, board_type=board_type,
                         region=region, city=city, province=province, type=type,

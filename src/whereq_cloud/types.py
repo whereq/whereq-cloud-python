@@ -300,6 +300,7 @@ class GeoAtPlace(TypedDict, total=False):
     name_en: Optional[str]
     name_zh: Optional[str]
     source: str
+    source_url: Optional[str]
     license: Optional[str]
     raw_admin_level: Optional[int]
     raw_place: Optional[str]
