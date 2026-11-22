@@ -520,3 +520,17 @@ def test_geo_boundaries_keeps_the_attribution_on_every_item():
     assert item["license"].startswith("ODbL")
     assert item["source_url"]
     assert item["geometry"]["type"] == "MultiPolygon"
+
+
+def test_geo_boundaries_can_exclude_a_kind():
+    """A country outline covers every viewport, and is rarely what a map
+    wants to draw — so the exclusion is the inverse of the include list."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(200, json={"count": 0, "truncated": False,
+                                         "limit": 200, "items": []})
+
+    _client(handler).geo_boundaries(exclude_kind="country,province,state")
+    assert "exclude_kind=country%2Cprovince%2Cstate" in captured["url"]

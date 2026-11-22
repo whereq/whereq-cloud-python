@@ -359,6 +359,7 @@ class Client:
 
     def geo_boundaries(self, bbox: Optional[str] = None,
                        kind: Optional[str] = None,
+                       exclude_kind: Optional[str] = None,
                        source: Optional[str] = None,
                        simplify_m: float = 50.0,
                        limit: int = 200) -> GeoBoundaryList:
@@ -372,6 +373,9 @@ class Client:
         Args:
             bbox: ``"minLon,minLat,maxLon,maxLat"`` — the viewport.
             kind: one or more concepts, comma separated.
+            exclude_kind: concepts to leave out, comma separated. A country
+                outline covers every viewport and is rarely what a map wants
+                to draw.
             source: one or more sources, comma separated.
             simplify_m: simplification tolerance in METRES (0 = exact).
             limit: how many outlines to return, 1–1000.
@@ -382,7 +386,8 @@ class Client:
         areas rather than the wards the user is looking at.
         """
         return self.get("/v1/geo/boundaries", bbox=bbox, kind=kind,
-                        source=source, simplify_m=simplify_m, limit=limit)
+                        exclude_kind=exclude_kind, source=source,
+                        simplify_m=simplify_m, limit=limit)
 
     def geo_at(self, lon: float, lat: float) -> GeoAtResponse:
         """Every place containing a point, broadest first.
